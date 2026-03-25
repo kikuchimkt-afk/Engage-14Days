@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'engage_14days_state';
+﻿const STORAGE_KEY = 'engage_14days_state';
 const THEME_KEY = 'engage_14days_theme';
 
 // Theme management
@@ -192,6 +192,7 @@ window.renderMap = function() {
             <div style="display:flex; gap:0.5rem; justify-content:center; margin-bottom:1.5rem; flex-wrap:wrap;">
                 <button class="btn-secondary" onclick="openSettingsModal()" style="font-size:0.85rem; padding:0.5rem 1rem;">⚙️ 設定</button>
                 <button class="btn-secondary" onclick="renderDiagnostic()" style="font-size:0.85rem; padding:0.5rem 1rem;">📊 診断</button>
+                <button class="btn-secondary" onclick="renderManual()" style="font-size:0.85rem; padding:0.5rem 1rem;">❓ 使い方</button>
             </div>
             
             ${reviewHtml}
@@ -446,16 +447,24 @@ window.selectChoice = function(selectedIndex, correctIndex) {
     showFeedback(isCorrect, correctStr);
 }
 
-window.playAudio = function(text) {
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.9;
-        window.speechSynthesis.speak(utterance);
-    } else {
-        alert("お使いのブラウザは音声合成に対応していません。");
-    }
+window.playAudio = function(qId) {
+    const audioPath = 'audio/' + qId + '.mp3';
+    const audio = new Audio(audioPath);
+    audio.play().catch(function(e) {
+        console.warn('MP3再生失敗:', e);
+        // フォールバック: Web Speech API
+        if ('speechSynthesis' in window) {
+            const qData = state.quiz.questions[state.quiz.currentIndex];
+            if (qData) {
+                const sentence = qData.sentence.replace(/\(\s+\)/g, qData.choices[qData.answer]);
+                window.speechSynthesis.cancel();
+                const utt = new SpeechSynthesisUtterance(sentence);
+                utt.lang = 'en-US';
+                utt.rate = 0.9;
+                window.speechSynthesis.speak(utt);
+            }
+        }
+    });
 }
 
 function showFeedback(isCorrect, correctStr = null, isTimeUp = false) {
@@ -486,7 +495,7 @@ function showFeedback(isCorrect, correctStr = null, isTimeUp = false) {
         
         <div class="completed-sentence">
             <div style="flex: 1;">${completedSentenceHtml}</div>
-            <button class="play-audio-btn" onclick="playAudio('${completedSentencePlain.replace(/'/g, "\\'")}')" aria-label="音声を再生">
+            <button class="play-audio-btn" onclick="playAudio('${qData.id}')" aria-label="音声を再生">
                 🔊
             </button>
         </div>
@@ -740,6 +749,93 @@ window.renderDiagnostic = function() {
             <div class="diag-section">
                 <div class="diag-section-title">📝 ミス問題リスト (${missItems.length}問)</div>
                 ${missListHtml}
+            </div>
+        </div>
+    `;
+    mainContent.innerHTML = html;
+}
+
+// ===========================
+// マニュアル（使い方ガイド）
+// ===========================
+window.renderManual = function() {
+    appHeader.style.display = 'block';
+    if(state.quiz.timer) clearInterval(state.quiz.timer);
+
+    let html = `
+        <div class="fade-in">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <button onclick="renderMap()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:1rem;">← マップへ</button>
+                <span style="font-size:0.85rem; color:var(--text-secondary);">使い方ガイド</span>
+            </div>
+
+            <div class="glass-panel" style="padding:1.5rem; margin-bottom:1.5rem;">
+                <h2 style="font-size:1.3rem; margin-bottom:1rem; text-align:center;">📚 Engage 14Days Challenge<br>使い方ガイド</h2>
+                <p style="font-size:0.85rem; color:var(--text-secondary); text-align:center; margin-bottom:1rem;">
+                    英文法エンゲージの全20章・576問を<br>14日間で3周マスターするアプリです
+                </p>
+            </div>
+
+            <div class="glass-panel" style="padding:1.2rem; margin-bottom:1rem;">
+                <h3 style="font-size:1rem; margin-bottom:0.8rem;">🎯 学習の流れ</h3>
+                <div style="font-size:0.85rem; line-height:1.8; color:var(--text-secondary);">
+                    <div style="margin-bottom:0.5rem;"><span style="background:var(--primary-color); color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem;">Step 1</span> トップ画面で1日の出題数(10〜20問)を選ぶ</div>
+                    <div style="margin-bottom:0.5rem;"><span style="background:var(--primary-color); color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem;">Step 2</span> Day 1 から順に問題を解いていく</div>
+                    <div style="margin-bottom:0.5rem;"><span style="background:var(--primary-color); color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem;">Step 3</span> 解答後、解説と完成英文を確認</div>
+                    <div style="margin-bottom:0.5rem;"><span style="background:var(--primary-color); color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem;">Step 4</span> 🔊ボタンで英文を音声で確認</div>
+                    <div><span style="background:var(--primary-color); color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem;">Step 5</span> 14日分クリアしたら次のLoopへ！</div>
+                </div>
+            </div>
+
+            <div class="glass-panel" style="padding:1.2rem; margin-bottom:1rem;">
+                <h3 style="font-size:1rem; margin-bottom:0.8rem;">🔄 3つのLoop</h3>
+                <div style="font-size:0.85rem; line-height:1.7; color:var(--text-secondary);">
+                    <div style="margin-bottom:0.8rem; padding:0.8rem; background:rgba(59,130,246,0.08); border-radius:8px; border-left:3px solid var(--primary-color);">
+                        <div style="font-weight:700; color:var(--primary-color); margin-bottom:2px;">Loop 1: 基礎</div>
+                        ヒント＆和訳付きで安心。まずは問題の形に慣れよう！
+                    </div>
+                    <div style="margin-bottom:0.8rem; padding:0.8rem; background:rgba(245,158,11,0.08); border-radius:8px; border-left:3px solid var(--warning-color);">
+                        <div style="font-weight:700; color:var(--warning-color); margin-bottom:2px;">Loop 2: 標準</div>
+                        ヒントなしの4択。実力で解いてみよう！
+                    </div>
+                    <div style="padding:0.8rem; background:rgba(239,68,68,0.08); border-radius:8px; border-left:3px solid var(--error-color);">
+                        <div style="font-weight:700; color:var(--error-color); margin-bottom:2px;">Loop 3: 応用</div>
+                        15秒の時間制限付き！入試問題の大学出典も表示。
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel" style="padding:1.2rem; margin-bottom:1rem;">
+                <h3 style="font-size:1rem; margin-bottom:0.8rem;">🛠️ 便利な機能</h3>
+                <div style="font-size:0.85rem; line-height:1.7; color:var(--text-secondary);">
+                    <div style="margin-bottom:0.5rem;"><strong>📝 復習モード</strong> — 間違えた問題だけを集中して解き直せます</div>
+                    <div style="margin-bottom:0.5rem;"><strong>📊 診断</strong> — どの単元でミスが多いか一目で確認できます</div>
+                    <div style="margin-bottom:0.5rem;"><strong>⚙️ 設定</strong> — テーマの変更(4種)や出題数の変更ができます</div>
+                    <div style="margin-bottom:0.5rem;"><strong>🔊 音声再生</strong> — 正解後に完成した英文を音声で聴けます</div>
+                    <div><strong>💾 自動保存</strong> — 進捗はブラウザに自動保存。途中で閉じてもOK</div>
+                </div>
+            </div>
+
+            <div class="glass-panel" style="padding:1.2rem; margin-bottom:1rem;">
+                <h3 style="font-size:1rem; margin-bottom:0.8rem;">📖 14日間のカリキュラム</h3>
+                <div style="font-size:0.8rem; line-height:1.6; color:var(--text-secondary);">
+                    <div>Day 1-2: 時制 ＋ 受動態</div>
+                    <div>Day 3: 助動詞</div>
+                    <div>Day 4: 仮定法</div>
+                    <div>Day 5: 不定詞 ＋ 動名詞</div>
+                    <div>Day 6: 分詞</div>
+                    <div>Day 7: 関係詞</div>
+                    <div>Day 8: 比較</div>
+                    <div>Day 9-10: 前置詞 ＋ 接続詞</div>
+                    <div>Day 11: 否定 ＋ 強調・倒置</div>
+                    <div>Day 12-13: 動詞・名詞の語法</div>
+                    <div>Day 14: 代名詞・形容詞・副詞の語法</div>
+                </div>
+            </div>
+
+            <div style="text-align:center; padding:1rem; font-size:0.8rem; color:var(--text-secondary);">
+                Engage 14Days Challenge v1.0<br>
+                英文法・語法 Engage (Field 1 + Field 2) 準拠
             </div>
         </div>
     `;
