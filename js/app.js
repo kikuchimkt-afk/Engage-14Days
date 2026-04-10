@@ -1,4 +1,4 @@
-﻿const STORAGE_KEY = 'engage_14days_state';
+const STORAGE_KEY = 'engage_14days_state';
 const THEME_KEY = 'engage_14days_theme';
 
 // Theme management
@@ -229,6 +229,16 @@ window.renderMap = function() {
     });
 }
 
+// 配列シャッフル（Fisher-Yates）
+function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 // 復習モード開始
 window.startReviewMode = function() {
     state.currentDay = 'review';
@@ -245,7 +255,14 @@ window.startReviewMode = function() {
     MOCK_DATA.forEach(dayInfo => {
         dayInfo.questions.forEach(q => {
             if(currentMistakes.includes(q.id)) {
-                reviewQuestions.push({ ...q, day: dayInfo.day }); // 元のDayメタデータを追加
+                // 選択肢をシャッフルし、正解インデックスを更新
+                const clone = { ...q, day: dayInfo.day };
+                if (clone.choices) {
+                    const correctText = clone.choices[clone.answer];
+                    clone.choices = shuffleArray(clone.choices);
+                    clone.answer = clone.choices.indexOf(correctText);
+                }
+                reviewQuestions.push(clone);
             }
         });
     });
